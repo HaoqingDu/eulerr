@@ -111,18 +111,112 @@ skyline_pack <- function(m) {
 #'
 #' @return A modified fpar object.
 #' @keywords internal
+# compress_layout <- function(fpar, id, fit) {
+#   # TODO: Port to c++
+#   n <- NCOL(id)
+# 
+#   clusters <- matrix(NA, nrow = n, ncol = n)
+# 
+#   for (i in 1:n) {
+#     for (j in 1:n) {
+#       clusters[i, j] <- any(id[, i] & id[, j] & fit > 0)
+#     }
+#   }
+# 
+#   for (i in 1:n) {
+#     for (j in 1:n) {
+#       if (any(clusters[i, ] & clusters[j, ])) {
+#         clusters[i, ] <- clusters[j, ] <- clusters[i, ] | clusters[j, ]
+#       }
+#     }
+#   }
+# 
+#   unique_clusters <- unique(lapply(split(clusters, row(clusters)), which))
+# 
+#   # Drop clusters that contain no elements (usually shapes without area)
+#   unique_clusters <- unique_clusters[lengths(unique_clusters) > 0L]
+#   n_clusters <- length(unique_clusters)
+# 
+#   if (n_clusters > 0) {
+#     bounds <- matrix(NA, ncol = n_clusters, nrow = 4L)
+# 
+#     for (i in seq_along(unique_clusters)) {
+#       ii <- unique_clusters[[i]]
+# 
+#       h <- fpar[ii, 1]
+#       k <- fpar[ii, 2]
+#       a <- fpar[ii, 3]
+#       b <- fpar[ii, 4]
+#       phi <- fpar[ii, 5]
+# 
+#       # normalize rotation by setting rotation angle between two first
+#       # ellipses to 0
+# 
+#       if (length(h) > 1) {
+#         theta <- atan2(k[2] - k[1], h[2] - h[1])
+# 
+#         h0 <- cos(-theta)*(h - h[1]) - sin(-theta)*(k - k[1]) + h[1]
+#         k0 <- sin(-theta)*(h - h[1]) + cos(-theta)*(k - k[1]) + k[1]
+#         phi0 <- phi - theta
+# 
+#         h <- h0
+#         k <- k0
+#         phi <- phi0
+# 
+#         xc <- mean(range(h))
+#         yc <- mean(range(k))
+# 
+#         # mirror across y axis if first shape is not at bottom
+#         if ((k[1] > yc)) {
+#           k <- yc - k
+#           phi <- pi - phi
+#         }
+# 
+#         # mirror across x axis if first set is not furthest to the left
+#         if (h[1] > xc) {
+#           h <- xc - h
+#           phi <- pi - phi
+#         }
+#       }
+# 
+#       limits <- get_bounding_box(h, k, a, b, phi)
+# 
+#       fpar[ii, 1] <- h
+#       fpar[ii, 2] <- k
+#       fpar[ii, 3] <- a
+#       fpar[ii, 4] <- b
+#       fpar[ii, 5] <- phi
+# 
+#       bounds[1:2, i] <- limits$xlim
+#       bounds[3:4, i] <- limits$ylim
+#     }
+# 
+#     if (n_clusters > 1) {
+#       # pack the bounding rectangles
+#       # TODO: Fix occasional errors in computing the bounding boxes.
+#       if (all(is.finite(bounds))) {
+#         new_bounds <- skyline_pack(bounds)
+#         for (i in seq_along(unique_clusters)) {
+#           ii <- unique_clusters[[i]]
+#           fpar[ii, 1] <- fpar[ii, 1] - (bounds[1, i] - new_bounds[1, i])
+#           fpar[ii, 2] <- fpar[ii, 2] - (bounds[3, i] - new_bounds[3, i])
+#         }
+#       }
+#     }
+#   }
+#   fpar
+# }
+
 compress_layout <- function(fpar, id, fit) {
-  # TODO: Port to c++
   n <- NCOL(id)
-
   clusters <- matrix(NA, nrow = n, ncol = n)
-
+  
   for (i in 1:n) {
     for (j in 1:n) {
       clusters[i, j] <- any(id[, i] & id[, j] & fit > 0)
     }
   }
-
+  
   for (i in 1:n) {
     for (j in 1:n) {
       if (any(clusters[i, ] & clusters[j, ])) {
@@ -130,70 +224,61 @@ compress_layout <- function(fpar, id, fit) {
       }
     }
   }
-
+  
   unique_clusters <- unique(lapply(split(clusters, row(clusters)), which))
-
-  # Drop clusters that contain no elements (usually shapes without area)
   unique_clusters <- unique_clusters[lengths(unique_clusters) > 0L]
   n_clusters <- length(unique_clusters)
-
+  
   if (n_clusters > 0) {
     bounds <- matrix(NA, ncol = n_clusters, nrow = 4L)
-
+    
     for (i in seq_along(unique_clusters)) {
       ii <- unique_clusters[[i]]
-
+      
       h <- fpar[ii, 1]
       k <- fpar[ii, 2]
       a <- fpar[ii, 3]
       b <- fpar[ii, 4]
       phi <- fpar[ii, 5]
-
-      # normalize rotation by setting rotation angle between two first
-      # ellipses to 0
-
+      
       if (length(h) > 1) {
         theta <- atan2(k[2] - k[1], h[2] - h[1])
-
+        
         h0 <- cos(-theta)*(h - h[1]) - sin(-theta)*(k - k[1]) + h[1]
         k0 <- sin(-theta)*(h - h[1]) + cos(-theta)*(k - k[1]) + k[1]
         phi0 <- phi - theta
-
+        
         h <- h0
         k <- k0
         phi <- phi0
-
+        
         xc <- mean(range(h))
         yc <- mean(range(k))
-
-        # mirror across y axis if first shape is not at bottom
+        
         if ((k[1] > yc)) {
           k <- yc - k
           phi <- pi - phi
         }
-
-        # mirror across x axis if first set is not furthest to the left
+        
         if (h[1] > xc) {
           h <- xc - h
           phi <- pi - phi
         }
       }
-
+      
       limits <- get_bounding_box(h, k, a, b, phi)
-
+      
       fpar[ii, 1] <- h
       fpar[ii, 2] <- k
       fpar[ii, 3] <- a
       fpar[ii, 4] <- b
       fpar[ii, 5] <- phi
-
+      
       bounds[1:2, i] <- limits$xlim
       bounds[3:4, i] <- limits$ylim
     }
-
+    
     if (n_clusters > 1) {
-      # pack the bounding rectangles
-      # TODO: Fix occasional errors in computing the bounding boxes.
       if (all(is.finite(bounds))) {
         new_bounds <- skyline_pack(bounds)
         for (i in seq_along(unique_clusters)) {
@@ -204,6 +289,77 @@ compress_layout <- function(fpar, id, fit) {
       }
     }
   }
+  
+  # === ADDITION: Rotate layout so h[1] == h[2] ===
+  if (nrow(fpar) >= 2) {
+    h1 <- fpar[1, 1]
+    k1 <- fpar[1, 2]
+    h2 <- fpar[2, 1]
+    k2 <- fpar[2, 2]
+    
+    theta <- atan2(k2 - k1, h2 - h1)
+    cos_theta <- cos(-theta)
+    sin_theta <- sin(-theta)
+    
+    h_rot <- cos_theta * (fpar[, 1] - h1) - sin_theta * (fpar[, 2] - k1) + h1
+    k_rot <- sin_theta * (fpar[, 1] - h1) + cos_theta * (fpar[, 2] - k1) + k1
+    phi_rot <- fpar[, 5] - theta
+    
+    fpar[, 1] <- h_rot
+    fpar[, 2] <- k_rot
+    fpar[, 5] <- phi_rot
+  }
+  
+  # === Mirror k[3] and/or k[4] if needed ===
+  if (nrow(fpar) >= 4) {
+    k1 <- fpar[1, 2]
+    for (i in 3:4) {
+      if (!is.na(fpar[i, 2])) {
+        k_val <- fpar[i, 2]
+        if ((i == 3 && k_val < k1) || (i == 4 && k_val >= k1)) {
+          fpar[i, 2] <- 2 * k1 - k_val
+          fpar[i, 5] <- pi - fpar[i, 5]
+        }
+      }
+    }
+  }
+  
+  # === Check angle at point 1 and spin point 3 if obtuse ===
+  if (nrow(fpar) >= 3) {
+    h1 <- fpar[1, 1]; k1 <- fpar[1, 2]
+    h2 <- fpar[2, 1]; k2 <- fpar[2, 2]
+    h3 <- fpar[3, 1]; k3 <- fpar[3, 2]
+    
+    d12_sq <- (h2 - h1)^2 + (k2 - k1)^2
+    d13_sq <- (h3 - h1)^2 + (k3 - k1)^2
+    d23_sq <- (h3 - h2)^2 + (k3 - k2)^2
+    
+    max_d <- max(d12_sq, d13_sq, d23_sq)
+    sum_others <- d12_sq + d13_sq + d23_sq - max_d
+    
+    if (max_d > sum_others) {
+      # Compute angle at 1 using dot product
+      v1x <- h2 - h1; v1y <- k2 - k1
+      v2x <- h3 - h1; v2y <- k3 - k1
+      dot <- v1x * v2x + v1y * v2y
+      norm1 <- sqrt(d12_sq)
+      norm2 <- sqrt(d13_sq)
+      cos_angle <- dot / (norm1 * norm2)
+      angle1 <- acos(cos_angle)
+      delta_angle <- angle1 - pi/2  # Adjust to 90°
+      
+      cos_d <- cos(-delta_angle)
+      sin_d <- sin(-delta_angle)
+      h3_new <- cos_d * (h3 - h1) - sin_d * (k3 - k1) + h1
+      k3_new <- sin_d * (h3 - h1) + cos_d * (k3 - k1) + k1
+      phi3_new <- fpar[3, 5] - delta_angle
+      
+      fpar[3, 1] <- h3_new
+      fpar[3, 2] <- k3_new
+      fpar[3, 5] <- phi3_new
+    }
+  }
+  
   fpar
 }
 
@@ -235,3 +391,5 @@ center_layout <- function(pars) {
   }
   pars
 }
+
+
