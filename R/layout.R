@@ -325,14 +325,21 @@ compress_layout <- function(fpar, id, fit) {
   }
   
   # === Check angle at point 1 and spin point 3 if obtuse ===
-  if (nrow(fpar) >= 3) {
-    h1 <- fpar[1, 1]; k1 <- fpar[1, 2]
-    h2 <- fpar[2, 1]; k2 <- fpar[2, 2]
-    h3 <- fpar[3, 1]; k3 <- fpar[3, 2]
-    
-    d12_sq <- (h2 - h1)^2 + (k2 - k1)^2
-    d13_sq <- (h3 - h1)^2 + (k3 - k1)^2
-    d23_sq <- (h3 - h2)^2 + (k3 - k2)^2
+  h1 <- fpar[1, 1]; k1 <- fpar[1, 2]
+  h2 <- fpar[2, 1]; k2 <- fpar[2, 2]
+  h3 <- fpar[3, 1]; k3 <- fpar[3, 2]
+  
+  d12_sq <- (h2 - h1)^2 + (k2 - k1)^2
+  d13_sq <- (h3 - h1)^2 + (k3 - k1)^2
+  d23_sq <- (h3 - h2)^2 + (k3 - k2)^2
+  
+  a2 <- fpar[2, 3]; b2 <- fpar[2, 4]
+  a3 <- fpar[3, 3]; b3 <- fpar[3, 4]
+  r2 <- mean(c(a2, b2))
+  r3 <- mean(c(a3, b3))
+  radii_sum_sq_32<- (r2 + r3)^2
+  
+  if (d23_sq > radii_sum_sq_32) {
     
     max_d <- max(d12_sq, d13_sq, d23_sq)
     sum_others <- d12_sq + d13_sq + d23_sq - max_d
@@ -346,7 +353,7 @@ compress_layout <- function(fpar, id, fit) {
       norm2 <- sqrt(d13_sq)
       cos_angle <- dot / (norm1 * norm2)
       angle1 <- acos(cos_angle)
-      delta_angle <- angle1 - pi/2  # Adjust to 90°
+      delta_angle <- angle1 - pi * 0.4  # Adjust to 90°
       
       cos_d <- cos(-delta_angle)
       sin_d <- sin(-delta_angle)
@@ -354,9 +361,112 @@ compress_layout <- function(fpar, id, fit) {
       k3_new <- sin_d * (h3 - h1) + cos_d * (k3 - k1) + k1
       phi3_new <- fpar[3, 5] - delta_angle
       
-      fpar[3, 1] <- h3_new
-      fpar[3, 2] <- k3_new
-      fpar[3, 5] <- phi3_new
+      # fpar[3, 1] <- h3_new
+      # fpar[3, 2] <- k3_new
+      # fpar[3, 5] <- phi3_new
+      
+      d23_new_sq <- (h3_new - h2)^2 + (k3_new - k2)^2
+      
+      if (d23_new_sq > radii_sum_sq_32) {
+        fpar[3, 1] <- h3_new
+        fpar[3, 2] <- k3_new
+        fpar[3, 5] <- phi3_new
+      } else {
+        # Compute vector from 2 to original 3
+        dx <- h3 - h2
+        dy <- k3 - k2
+        norm <- sqrt(dx^2 + dy^2)
+        
+        if (norm == 0) {
+          dx <- 1  # Arbitrary direction to avoid zero division
+          dy <- 0
+          norm <- 1
+        }
+        
+        dx <- dx / norm
+        dy <- dy / norm
+        
+        # Set distance = r2 + r3
+        h3_alt <- h2 + dx * (r2 + r3)
+        k3_alt <- k2 + dy * (r2 + r3)
+        
+        # Preserve original angle for phi
+        fpar[3, 1] <- h3_alt
+        fpar[3, 2] <- k3_alt
+        # Optionally update phi to match direction
+        fpar[3, 5] <- atan2(dy, dx)
+      }
+      
+    }
+  }
+  
+  # === Adjust point 4 to top of point 2 ===
+  h1 <- fpar[1, 1]; k1 <- fpar[1, 2]
+  h2 <- fpar[2, 1]; k2 <- fpar[2, 2]
+  h4 <- fpar[4, 1]; k4 <- fpar[4, 2]
+  
+  d12_sq <- (h2 - h1)^2 + (k2 - k1)^2
+  d14_sq <- (h4 - h1)^2 + (k4 - k1)^2
+  d24_sq <- (h4 - h2)^2 + (k4 - k2)^2
+  
+  a1 <- fpar[1, 3]; b1 <- fpar[1, 4]
+  a4 <- fpar[4, 3]; b4 <- fpar[4, 4]
+  r1 <- mean(c(a1, b1))
+  r4 <- mean(c(a4, b4))
+  radii_sum_sq_41 <- (r1 + r4)^2
+  
+  if (d14_sq > radii_sum_sq_41) {
+    
+    max_d <- max(d12_sq, d14_sq, d24_sq)
+    sum_others <- d12_sq + d14_sq + d24_sq - max_d
+    
+    if (max_d > sum_others) {
+      v1x <- h1 - h2; v1y <- k1 - k2
+      v2x <- h4 - h2; v2y <- k4 - k2
+      dot <- v1x * v2x + v1y * v2y
+      norm1 <- sqrt(d12_sq)
+      norm2 <- sqrt(d24_sq)
+      cos_angle <- dot / (norm1 * norm2)
+      angle2 <- acos(cos_angle)
+      delta_angle <- angle2 - pi * 0.4
+      
+      cos_d <- cos(-delta_angle)
+      sin_d <- sin(-delta_angle)
+      h4_new <- cos_d * (h4 - h2) - sin_d * (k4 - k2) + h2
+      k4_new <- sin_d * (h4 - h2) + cos_d * (k4 - k2) + k2
+      phi4_new <- fpar[4, 5] - delta_angle
+      
+      d14_new_sq <- (h4_new - h1)^2 + (k4_new - k1)^2
+      
+      if (d14_new_sq > radii_sum_sq_41) {
+        fpar[4, 1] <- h4_new
+        fpar[4, 2] <- k4_new
+        fpar[4, 5] <- phi4_new
+      } else {
+        # Compute vector from 1 to original 4
+        dx <- h4 - h1
+        dy <- k4 - k1
+        norm <- sqrt(dx^2 + dy^2)
+        
+        if (norm == 0) {
+          dx <- 0
+          dy <- 1  # Arbitrary vertical direction
+          norm <- 1
+        }
+        
+        dx <- dx / norm
+        dy <- dy / norm
+        
+        # Set distance = r1 + r4
+        h4_alt <- h1 + dx * (r1 + r4)
+        k4_alt <- k1 + dy * (r1 + r4)
+        
+        # Set position and optionally adjust phi to match direction
+        fpar[4, 1] <- h4_alt
+        fpar[4, 2] <- k4_alt
+        fpar[4, 5] <- atan2(dy, dx)
+      }
+      
     }
   }
   
@@ -391,5 +501,3 @@ center_layout <- function(pars) {
   }
   pars
 }
-
-
