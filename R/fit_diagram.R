@@ -233,6 +233,7 @@ fit_diagram <- function(
         p = pars,
         data = areas_disjoint,
         circle = circle,
+        r_fixed = r, # fixed r
         loss_type = loss,
         loss_aggregator_type = loss_aggregator,
         iterlim = 1e6
