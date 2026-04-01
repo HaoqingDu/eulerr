@@ -337,7 +337,10 @@ fit_diagram <- function(
       }
 
       # Normalize semiaxes and rotation
-      temp <- normalize_pars(temp)
+      # temp <- normalize_pars(temp)
+      if (is.null(total)) {
+        temp <- normalize_pars(temp)
+      }   
 
       # Find disjoint clusters and compress the layout
       temp <- compress_layout(temp, id, fit[!empty_subsets])
