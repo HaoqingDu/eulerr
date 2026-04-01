@@ -1,5 +1,6 @@
 fit_diagram <- function(
   combinations,
+  total = NULL,
   type = c("euler", "venn"),
   input = c("disjoint", "union"),
   shape = c("circle", "ellipse"),
@@ -69,6 +70,12 @@ fit_diagram <- function(
     if (any(areas_disjoint < 0)) {
       stop("Check your set configuration. Some disjoint areas are negative.")
     }
+  }
+  
+  # Scale based on a total number
+  if (!is.null(total)) {
+  areas <- areas / total
+  areas_disjoint <- areas_disjoint / total
   }
 
   # setup return values
