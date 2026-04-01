@@ -73,10 +73,10 @@ fit_diagram <- function(
   }
   
   # Scale based on a total number
-  if (!is.null(total)) {
-  areas <- areas / total
-  areas_disjoint <- areas_disjoint / total
-  }
+  # if (!is.null(total)) {
+  # areas <- areas / total
+  # areas_disjoint <- areas_disjoint / total
+  # }
 
   # setup return values
   orig <- rep.int(0, N)
@@ -141,7 +141,15 @@ fit_diagram <- function(
       ones <- id_sums == 1L
       twos <- id_sums == 2L
       two <- choose_two(1:n)
-      r <- sqrt(areas[ones] / pi)
+      # r <- sqrt(areas[ones] / pi)
+      r_raw <- sqrt(areas[ones] / pi)
+
+      if (!is.null(total)) {
+        scale_factor <- sqrt(sum(areas[ones]) / total)
+        r <- r_raw / scale_factor
+      } else {
+        r <- r_raw
+      }
 
       # Establish identities of disjoint and subset sets
       subset <- disjoint <- matrix(FALSE, ncol = n, nrow = n)
@@ -262,7 +270,12 @@ fit_diagram <- function(
       # Normalize layout
       nlm_fit <- as.vector(intersect_ellipses(nlm_solution, circle))
 
-      nlm_pars <- compress_layout(normalize_pars(tpar), id, nlm_fit)
+      # nlm_pars <- compress_layout(normalize_pars(tpar), id, nlm_fit)
+      if (is.null(total)) {
+        nlm_pars <- compress_layout(normalize_pars(tpar), id, nlm_fit)
+      } else {
+        nlm_pars <- compress_layout(tpar, id, nlm_fit)
+      }
 
       nlm_diagError <- diagError(nlm_fit, orig[!empty_subsets])
 
@@ -343,7 +356,10 @@ fit_diagram <- function(
       }   
 
       # Find disjoint clusters and compress the layout
-      temp <- compress_layout(temp, id, fit[!empty_subsets])
+      # temp <- compress_layout(temp, id, fit[!empty_subsets])
+      if (is.null(total)) {
+        temp <- compress_layout(temp, id, fit[!empty_subsets])
+      }
 
       # Center the solution on the coordinate plane
       fpar[!empty_sets, ] <- center_layout(temp)
