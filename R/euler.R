@@ -133,12 +133,14 @@ euler.default <- function(
   loss = c("square", "abs", "region"),
   loss_aggregator = c("sum", "max"),
   control = list(),
+  total = NULL,
   ...
 ) {
   loss <- match.arg(loss)
 
   fit_diagram(
     combinations,
+    total,
     "euler",
     input,
     shape,
