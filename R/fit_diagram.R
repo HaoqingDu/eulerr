@@ -247,24 +247,35 @@ fit_diagram <- function(
         iterlim = 1e6
       )$estimate
 
-      tpar <- as.data.frame(
-        matrix(
-          data = nlm_solution,
-          ncol = if (circle) 3L else 5L,
-          dimnames = list(
-            setnames[!empty_sets],
-            if (circle) {
-              c("h", "k", "r")
-            } else {
-              c("h", "k", "a", "b", "phi")
-            }
-          ),
-          byrow = TRUE
-        ),
-        stringsAsFactors = TRUE
-      )
+      # tpar <- as.data.frame(
+      #   matrix(
+      #     data = nlm_solution,
+      #     ncol = if (circle) 3L else 5L,
+      #     dimnames = list(
+      #       setnames[!empty_sets],
+      #       if (circle) {
+      #         c("h", "k", "r")
+      #       } else {
+      #         c("h", "k", "a", "b", "phi")
+      #       }
+      #     ),
+      #     byrow = TRUE
+      #   ),
+      #   stringsAsFactors = TRUE
+      # )
+      # if (circle) {
+      #   tpar <- cbind(tpar, tpar[, 3L], 0)
+      # }
+
       if (circle) {
-        tpar <- cbind(tpar, tpar[, 3L], 0)
+        coords <- matrix(nlm_solution, ncol = 2, byrow = TRUE)
+        tpar <- cbind(coords, r)
+        colnames(tpar) <- c("h", "k", "r")
+        tpar <- as.data.frame(tpar)
+        tpar <- cbind(tpar, tpar$r, 0)
+        colnames(tpar) <- c("h", "k", "a", "b", "phi")
+      } else {
+        # ellipse case if needed later
       }
 
       # Normalize layout
@@ -339,14 +350,20 @@ fit_diagram <- function(
       diagError <- diagError(regionError = regionError)
       stress <- stress(orig, fit)
 
-      temp <- matrix(
-        data = final_par,
-        ncol = if (circle) 3L else 5L,
-        byrow = TRUE
-      )
+      # temp <- matrix(
+      #   data = final_par,
+      #   ncol = if (circle) 3L else 5L,
+      #   byrow = TRUE
+      # )
 
+      # if (circle) {
+      #   temp <- cbind(temp, temp[, 3L], 0)
+      # }
       if (circle) {
-        temp <- cbind(temp, temp[, 3L], 0)
+        coords <- matrix(final_par, ncol = 2, byrow = TRUE)
+        temp <- cbind(coords, r, r, 0)
+      } else {
+        temp <- matrix(final_par, ncol = 5L, byrow = TRUE)
       }
 
       # Normalize semiaxes and rotation
