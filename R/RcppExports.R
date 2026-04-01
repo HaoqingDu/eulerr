@@ -9,6 +9,25 @@ optim_final_loss <- function(par, data, circle, loss_type = "squared_error", los
     .Call(`_eulerr_optim_final_loss`, par, data, circle, loss_type, loss_aggregator_type)
 }
 
+optim_final_loss_fixed <- function(par, data, circle, r_fixed,
+                                   loss_type = "square",
+                                   loss_aggregator_type = "sum") {
+
+  n <- length(r_fixed)
+
+  full_par <- numeric(3 * n)
+
+  # fill h
+  full_par[seq(1, 3*n, 3)] <- par[seq(1, 2*n, 2)]
+  # fill k
+  full_par[seq(2, 3*n, 3)] <- par[seq(2, 2*n, 2)]
+  # fill r (fixed)
+  full_par[seq(3, 3*n, 3)] <- r_fixed
+
+  .Call(`_eulerr_optim_final_loss`,
+        full_par, data, circle, loss_type, loss_aggregator_type)
+}
+
 optim_init <- function(par, d, disjoint, subset) {
     .Call(`_eulerr_optim_init`, par, d, disjoint, subset)
 }

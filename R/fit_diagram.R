@@ -195,20 +195,32 @@ fit_diagram <- function(
       # Final layout
       circle <- match.arg(shape) == "circle"
 
+      # if (circle) {
+      #   pars <- as.vector(matrix(
+      #     c(initial_layout$estimate, r),
+      #     3L,
+      #     byrow = TRUE
+      #   ))
+      # } else {
+      #   pars <- as.vector(rbind(
+      #     matrix(initial_layout$estimate, 2L, byrow = TRUE),
+      #     r,
+      #     r,
+      #     0,
+      #     deparse.level = 0L
+      #   ))
+      # }
+
       if (circle) {
-        pars <- as.vector(matrix(
-          c(initial_layout$estimate, r),
-          3L,
-          byrow = TRUE
-        ))
+        # only positions
+        pars <- as.vector(initial_layout$estimate)
+        fixed_r <- r
       } else {
-        pars <- as.vector(rbind(
-          matrix(initial_layout$estimate, 2L, byrow = TRUE),
-          r,
-          r,
-          0,
-          deparse.level = 0L
-        ))
+        # only positions for ellipses (keep axes fixed)
+        pars <- as.vector(initial_layout$estimate)
+        fixed_a <- r
+        fixed_b <- r
+        fixed_phi <- rep(0, length(r))
       }
 
       orig[!empty_subsets] <- areas_disjoint
@@ -216,7 +228,8 @@ fit_diagram <- function(
       # Try to find a solution using nlm() first (faster)
       # TODO: Allow user options here?
       nlm_solution <- stats::nlm(
-        f = optim_final_loss,
+        # f = optim_final_loss,
+        f = optim_final_loss_fixed
         p = pars,
         data = areas_disjoint,
         circle = circle,
